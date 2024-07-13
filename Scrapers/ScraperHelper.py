@@ -114,11 +114,6 @@ class ScraperHelper:
         category_name = soup.select_one('b').text
         return CatalogModel(modelId=category_id, name=category_name)
 
-    @staticmethod
-    def get_node_data(hierarchy_items: list[HierarchyItemModel], current_id=None) -> list[HierarchyItemModel]:
-        parent_ids = set(item.ParentId for item in hierarchy_items)
-        return [item for item in hierarchy_items if item.Id not in parent_ids and item.Id != current_id]
-
     def resolve_sgl_code(self, catalog_name: str, product_pid: str) -> str:
         if catalog_name in self.prev_data and product_pid in self.prev_data[catalog_name]:
             sgl_code = self.prev_data[catalog_name][product_pid]
@@ -175,17 +170,6 @@ class ScraperHelper:
     def download_diagram(self, image_url: str, sgl_code: str, section: str) -> str:
         print(f'Downloading img at : {image_url}')
         file_name = f'{self.sanitize_filename(f'{sgl_code}-{section}')}.jpg'
-        # response = requests.get(image_url, headers=self.headers)
-        # if response.status_code == 200:
-        #     with open(f'{self.image_directory}/{file_name}', 'wb') as file:
-        #         file.write(response.content)
-        # else:
-        #     print(json.dumps({
-        #         'Error when downloading img': {
-        #             'StatusCode': response.status_code,
-        #             'Response': response.text
-        #         }
-        #     }, indent=4))
         return file_name
 
     def scrape_catalog(self, node_id: int = 0) -> list[JsonResponseModel]:
@@ -203,20 +187,4 @@ class ScraperHelper:
                         new_leaf_nodes = self.scrape_catalog(child_node.Id)
                         leaf_nodes.extend(new_leaf_nodes)
                 return leaf_nodes
-        return []
-
-    def fetch_and_find_documents(self, node_id) -> list[JsonResponseModel]:
-        json_model = self.request_node_data(node_id)
-        if json_model:
-            if json_model.ProductDocuments is not None:
-                print('Products Found')
-                return [json_model]
-            if json_model.Hierarchy:
-                nodes = self.get_node_data(json_model.Hierarchy, current_id=node_id)
-                documents: list[JsonResponseModel] = []
-                for sub_node in nodes:
-                    sub_documents = self.fetch_and_find_documents(sub_node.Id)
-                    if sub_documents:
-                        documents.extend(sub_documents)
-                return documents
         return []
