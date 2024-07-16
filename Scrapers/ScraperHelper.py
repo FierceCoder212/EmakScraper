@@ -36,7 +36,7 @@ class ScraperHelper:
         self.image_directory = 'Images'
         if not os.path.exists(self.image_directory):
             os.makedirs(self.image_directory)
-        self.sql_helper = SQLiteHelper('Scraped_Data.db')
+        self.sql_helper = SQLiteHelper('SGL Product.db')
         self.images_data = []
 
     def scrape_data(self):
@@ -49,11 +49,19 @@ class ScraperHelper:
                 print(f'Documents found : {len(catalog_documents)}')
                 for index, document in enumerate(catalog_documents):
                     print(f'On doc : {index + 1} out of {len(catalog_documents)}')
-                    sgl_code = self.get_sgl_code(document=document, catalog_name=catalog.name)
-                    doc_record = self.create_doc_record(document=document, sgl_code=sgl_code)
-                    print(f'Inserting records : {len(doc_record)}')
-                    self.sql_helper.insert_many_records(doc_record)
-        self.save_images_data()
+                    sgl_code, product = self.get_sgl_code(document=document, catalog_name=catalog.name)
+                    self.sql_helper.insert_record({
+                        'sgl_unique_model_code': sgl_code,
+                        'section': product,
+                        'part_number': "",
+                        'description': "",
+                        'item_number': "",
+                        'section_diagram': ""
+                    })
+                    # doc_record = self.create_doc_record(document=document, sgl_code=sgl_code)
+                    # print(f'Inserting records : {len(doc_record)}')
+                    # self.sql_helper.insert_many_records(doc_record)
+        # self.save_images_data()
 
     def save_images_data(self):
         print(f'Saving images : {len(self.images_data)}')
@@ -122,14 +130,14 @@ class ScraperHelper:
             self.latest_model_code += 1
         return sgl_code
 
-    def get_sgl_code(self, document: JsonResponseModel, catalog_name: str) -> str:
+    def get_sgl_code(self, document: JsonResponseModel, catalog_name: str) -> [str, str]:
         curr_product = [doc for doc in document.Hierarchy if doc.IsSelected][0].Description
         product_name, separator, product_year = curr_product.partition('Cat.')
         product_name = product_name.strip()
         product_year = product_year.strip()
         product_pid = f'{product_name}{f' {product_year}' if product_year else ''}'
         sgl_code = self.resolve_sgl_code(catalog_name=catalog_name, product_pid=product_pid)
-        return sgl_code
+        return sgl_code, curr_product
 
     def create_doc_record(self, document: JsonResponseModel, sgl_code: str) -> list[dict]:
         all_data = []
