@@ -91,6 +91,17 @@ class SQLiteHelper:
         except Error as e:
             print(e)
 
+    def insert_many_records_tuple_with_id(self, records):
+        """ insert multiple records into the parts table """
+        sql = 'INSERT INTO parts(id,sgl_unique_model_code, section, part_number, description, item_number, section_diagram) VALUES(?,?,?,?,?,?,?)'
+        try:
+            with lock:
+                cur = self.conn.cursor()
+                cur.executemany(sql, records)
+                self.conn.commit()
+        except Error as e:
+            print(e)
+
     def get_all(self):
         """ Retrieve all records from the parts table """
         sql = 'SELECT sgl_unique_model_code, section, part_number, description, item_number, section_diagram FROM parts;'
